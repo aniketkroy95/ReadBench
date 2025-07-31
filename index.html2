@@ -1,3 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student + Library + Fee Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    }
+                }
+            }
+        }
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdLm_9eQm2T5h3ZQcJvJxZ5X7Zv5X7Zv5",
+            authDomain: "student-management-12345.firebaseapp.com",
+            projectId: "student-management-12345",
+            storageBucket: "student-management-12345.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef1234567890"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+    </script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        .dark-mode {
+            --dark: #f8fafc;
+            --light: #1e293b;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        
+        .dark-mode .card {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+        
+        .dark-mode input, .dark-mode select, .dark-mode textarea {
+            background-color: #334155;
+            color: #f1f5f9;
+            border-color: #475569;
+        }
+        
+        .dark-mode .table-container {
+            background-color: #1e293b;
+        }
+        
+        .dark-mode table {
+            color: #f1f5f9;
+        }
+        
+        .dark-mode table th {
+            background-color: #1e293b;
+        }
+        
+        .dark-mode table tr:nth-child(even) {
+            background-color: #0f172a;
+        }
+        
+        .badge-paid {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-partial {
+            background-color: #fffbeb;
+            color: #854d0e;
+        }
+        
+        .badge-due {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .dark-mode .badge-paid {
+            background-color: #166534;
+            color: #dcfce7;
+        }
+        
+        .dark-mode .badge-partial {
+            background-color: #854d0e;
+            color: #fffbeb;
+        }
+        
+        .dark-mode .badge-due {
+            background-color: #b91c1c;
+            color: #fee2e2;
+        }
+        
+        .shift-1 { background-color: #dbeafe; }
+        .shift-2 { background-color: #f0fdf4; }
+        .shift-3 { background-color: #fffbeb; }
+        .shift-4 { background-color: #fdf2f8; }
+        
+        .dark-mode .shift-1 { background-color: #1e3a8a; }
+        .dark-mode .shift-2 { background-color: #14532d; }
+        .dark-mode .shift-3 { background-color: #713f12; }
+        .dark-mode .shift-4 { background-color: #831843; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .chart-container {
+            height: 300px;
+        }
+        
+        .action-buttons {
+            transition: all 0.2s;
+        }
+        
+        .action-buttons button {
+            opacity: 0.7;
+        }
+        
+        .action-buttons button:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        
+        .profile-card {
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            background: white;
+        }
+        
+        .dark-mode .profile-card {
+            background: #1e293b;
+        }
+        
+        .profile-header {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            padding: 25px;
+            color: white;
+            text-align: center;
+        }
+        
+        .profile-pic {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.3);
+            background-color: #f1f5f9;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            color: #3b82f6;
+        }
+        
+        .profile-body {
+            padding: 30px;
+        }
+        
+        .profile-section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        
+        .dark-mode .profile-section {
+            border-bottom: 1px dashed #334155;
+        }
+        
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .profile-label {
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        
+        .dark-mode .profile-label {
+            color: #94a3b8;
+        }
+        
+        .profile-value {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .shift-availability {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        
+        .shift-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .available-shift {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        
+        .unavailable-shift {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .dark-mode .available-shift {
+            background-color: #166534;
+            color: #dcfce7;
+        }
+        
+        .dark-mode .unavailable-shift {
+            background-color: #b91c1c;
+            color: #fee2e2;
+        }
+        
+        .import-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .import-modal-content {
+            background-color: white;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .dark-mode .import-modal-content {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+        
+        .file-drop-area {
+            border: 2px dashed #3b82f6;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+        
+        .dark-mode .file-drop-area {
+            background-color: rgba(30, 41, 59, 0.5);
+            border-color: #8b5cf6;
+        }
+        
+        .file-drop-area:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .dark-mode .file-drop-area:hover {
+            background-color: rgba(30, 41, 59, 0.7);
+        }
+        
+        .file-drop-area.drag-over {
+            background-color: rgba(59, 130, 246, 0.2);
+            border-color: #10b981;
+        }
+        
+        .file-drop-area i {
+            font-size: 48px;
+            color: #3b82f6;
+            margin-bottom: 15px;
+        }
+        
+        .dark-mode .file-drop-area i {
+            color: #8b5cf6;
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f1f5f9;
+            border-radius: 6px;
+            text-align: left;
+        }
+        
+        .dark-mode .file-info {
+            background-color: #334155;
+        }
+        
+        .import-stats {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .dark-mode .import-stats {
+            background-color: #1e293b;
+            border-color: #334155;
+        }
+        
+        .import-stats-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .import-stats-value {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+        
+        .dark-mode .import-stats-value {
+            color: #8b5cf6;
+        }
+        
+        .import-success {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .import-error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .dark-mode .login-card {
+            background: #1e293b;
+        }
+        
+        .firebaseui-container {
+            margin-top: 20px;
+        }
+        
+        .sync-status {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .sync-online {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .sync-offline {
+            background-color: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 transition-colors duration-300">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <h1 class="text-2xl font-bold text-center mb-6">Student Management System</h1>
+            <div id="firebaseui-auth-container"></div>
+            <div class="mt-4 text-center text-gray-600 dark:text-gray-300">
+                <p>Sign in to access the management dashboard</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Application (hidden until authenticated) -->
+    <div id="appContainer" class="hidden">
+        <!-- Sync Status Indicator -->
+        <div id="syncStatus" class="sync-status sync-online">
+            <i class="fas fa-wifi mr-1"></i> Online
+        </div>
+        
+        <!-- Toast Notification -->
+        <div class="toast" id="toast"></div>
+        
+        <!-- Reset Banner -->
+        <div id="resetBanner" class="reset-banner hidden">
+            <div class="flex items-center">
+                <i class="fas fa-sync-alt"></i>
+                <span>Monthly fees have been automatically reset for <span id="resetCount" class="reset-summary">0 students</span></span>
+            </div>
+            <button id="dismissBanner" class="text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Import Modal -->
+        <div id="importModal" class="import-modal">
+            <div class="import-modal-content">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Import Data</h2>
+                    <button id="closeImportModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div id="fileDropArea" class="file-drop-area">
+                    <i class="fas fa-file-import"></i>
+                    <h3 class="text-xl font-semibold mb-2">Drop your data file here</h3>
+                    <p class="text-gray-600 dark:text-gray-300 mb-4">Or click to browse files</p>
+                    <button id="browseFilesBtn" class="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                        Select File
+                    </button>
+                    <input type="file" id="fileInput" accept=".json" class="hidden">
+                </div>
+                
+                <div id="fileInfo" class="file-info hidden">
+                    <p><strong>File:</strong> <span id="fileName"></span></p>
+                    <p><strong>Size:</strong> <span id="fileSize"></span></p>
+                    <p><strong>Type:</strong> <span id="fileType"></span></p>
+                </div>
+                
+                <div id="importStats" class="import-stats hidden">
+                    <h3 class="text-lg font-semibold mb-3">Import Summary</h3>
+                    <div class="import-stats-item">
+                        <span>Students:</span>
+                        <span id="importStudents" class="import-stats-value">0</span>
+                    </div>
+                    <div class="import-stats-item">
+                        <span>Library Sets:</span>
+                        <span id="importSets" class="import-stats-value">0</span>
+                    </div>
+                    <div class="import-stats-item">
+                        <span>Shift Availability:</span>
+                        <span id="importShifts" class="import-stats-value">0 sets</span>
+                    </div>
+                </div>
+                
+                <div id="importResult" class="mt-4 hidden"></div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="cancelImportBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button id="confirmImportBtn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        Import Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Container -->
+        <div class="container mx-auto px-4 py-6">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-primary">Student + Library + Fee Management</h1>
+                    <p class="text-gray-600 dark:text-gray-300">Firebase-powered management system</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="darkModeToggle" class="bg-gray-200 dark:bg-gray-700 p-2 rounded-full">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:inline"></i>
+                    </button>
+                    <button id="importBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-file-import mr-2"></i> Import
+                    </button>
+                    <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-file-export mr-2"></i> Export
+                    </button>
+                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="card bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Total Students</h3>
+                            <p id="totalStudents" class="text-3xl font-bold mt-2">0</p>
+                        </div>
+                        <div class="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                            <i class="fas fa-users text-blue-600 dark:text-blue-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Fee Paid</h3>
+                            <p id="paidStudents" class="text-3xl font-bold mt-2">0</p>
+                        </div>
+                        <div class="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                            <i class="fas fa-check-circle text-green-600 dark:text-green-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Fee Due</h3>
+                            <p id="dueStudents" class="text-3xl font-bold mt-2">0</p>
+                        </div>
+                        <div class="bg-red-100 dark:bg-red-900 p-3 rounded-full">
+                            <i class="fas fa-exclamation-circle text-red-600 dark:text-red-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Shift Distribution</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1" id="shiftDistribution">Loading...</p>
+                        </div>
+                        <div class="bg-purple-100 dark:bg-purple-900 p-3 rounded-full">
+                            <i class="fas fa-clock text-purple-600 dark:text-purple-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold mb-2">Student Records</h2>
+                        <p class="text-gray-600 dark:text-gray-300">Manage student information, fees, shifts and library sets</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <button id="addStudentBtn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i> Add Student
+                        </button>
+                        <button id="manageSetsBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-book mr-2"></i> Manage Sets
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Search Students</label>
+                        <input type="text" id="searchInput" placeholder="Name or Roll Number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Filter by Shift</label>
+                        <select id="shiftFilter" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="">All Shifts</option>
+                            <option value="1">Shift 1 (6AM-10AM)</option>
+                            <option value="2">Shift 2 (10AM-2PM)</option>
+                            <option value="3">Shift 3 (2PM-6PM)</option>
+                            <option value="4">Shift 4 (6PM-10PM)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Filter by Fee Status</label>
+                        <select id="feeFilter" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="">All Status</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Partial">Partial</option>
+                            <option value="Due">Due</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Actions</label>
+                        <div class="flex space-x-2">
+                            <button id="resetFilters" class="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-3 py-2 rounded-lg">
+                                Reset Filters
+                            </button>
+                            <button id="printBtn" class="bg-gray-800 text-white px-3 py-2 rounded-lg">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Library Sets Section -->
+            <div id="librarySetsSection" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Library Set Management</h2>
+                    <button id="closeSetsBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-1">Total Library Sets</label>
+                    <div class="flex">
+                        <input type="number" id="totalSets" min="1" value="10" class="w-full md:w-48 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button id="saveTotalSets" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg">
+                            Save
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="shiftSetsContainer">
+                    <!-- Shift sets will be dynamically generated here -->
+                </div>
+            </div>
+
+            <!-- Student Table -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+                <div class="table-container">
+                    <table class="w-full">
+                        <thead class="sticky top-0 bg-gray-100 dark:bg-gray-800">
+                            <tr>
+                                <th class="py-3 px-4 text-left">Student</th>
+                                <th class="py-3 px-4 text-left">Roll No</th>
+                                <th class="py-3 px-4 text-left">Mobile</th>
+                                <th class="py-3 px-4 text-left">Admission Date</th>
+                                <th class="py-3 px-4 text-left">Shifts</th>
+                                <th class="py-3 px-4 text-left">Set No</th>
+                                <th class="py-3 px-4 text-left">Fee Status</th>
+                                <th class="py-3 px-4 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody">
+                            <!-- Student data will be dynamically added here -->
+                            <tr>
+                                <td colspan="8" class="py-8 text-center text-gray-500">
+                                    <i class="fas fa-users-slash text-3xl mb-2"></i>
+                                    <p>No student records found</p>
+                                    <button id="addFirstStudent" class="mt-4 bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                        Add First Student
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Fee Chart -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mt-8">
+                <h2 class="text-xl font-bold mb-4">Fee Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="feeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Modal -->
+        <div id="studentModal" class="modal">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold" id="modalTitle">Add New Student</h2>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="studentForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="studentId">
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Full Name *</label>
+                        <input type="text" id="fullName" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Roll Number *</label>
+                        <input type="text" id="rollNumber" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Mobile Number *</label>
+                        <input type="tel" id="mobileNumber" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Aadhar Number</label>
+                        <input type="text" id="aadharNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Admission Date *</label>
+                        <input type="date" id="admissionDate" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Monthly Fee (₹) *</label>
+                        <input type="number" id="monthlyFee" min="0" value="0" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Fee Paid (₹)</label>
+                        <input type="number" id="feePaid" min="0" value="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Seat Number</label>
+                        <input type="text" id="seatNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1">Assigned Shifts *</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="shiftsContainer">
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" name="shifts" value="1" class="rounded text-primary focus:ring-primary">
+                                <span>Shift 1 (6AM-10AM)</span>
+                            </label>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" name="shifts" value="2" class="rounded text-primary focus:ring-primary">
+                                <span>Shift 2 (10AM-2PM)</span>
+                            </label>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" name="shifts" value="3" class="rounded text-primary focus:ring-primary">
+                                <span>Shift 3 (2PM-6PM)</span>
+                            </label>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" name="shifts" value="4" class="rounded text-primary focus:ring-primary">
+                                <span>Shift 4 (6PM-10PM)</span>
+                            </label>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-gray-400" id="shiftAvailabilityInfo"></div>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1">Set Number</label>
+                        <select id="setNumber" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="">Select a set</option>
+                            <!-- Set options will be dynamically generated -->
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2 flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancelBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                            Cancel
+                        </button>
+                        <button type="submit" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                            Save Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Student Profile Modal -->
+        <div id="profileModal" class="modal">
+            <div class="modal-content profile-modal-content bg-white dark:bg-gray-800 rounded-xl shadow-lg p-0 w-full max-w-3xl">
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-pic">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h2 id="profileName" class="text-2xl font-bold"></h2>
+                        <p id="profileRoll" class="text-lg opacity-90"></p>
+                        <p id="profileFeeStatus" class="mt-2 px-4 py-1 inline-block rounded-full font-medium"></p>
+                    </div>
+                    
+                    <div class="profile-body">
+                        <div class="print-header">
+                            <h3 class="text-lg font-bold">Student Profile</h3>
+                            <p>Generated on <span id="printDate"></span></p>
+                        </div>
+                        
+                        <div class="flex justify-end mb-4 space-x-3 no-print">
+                            <button id="printProfileBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-print mr-2"></i> Print Profile
+                            </button>
+                            <button id="closeProfileBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                Close
+                            </button>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3 class="text-xl font-bold mb-4">Personal Information</h3>
+                            <div class="profile-grid">
+                                <div>
+                                    <div class="profile-label">Mobile Number</div>
+                                    <div id="profileMobile" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Aadhar Number</div>
+                                    <div id="profileAadhar" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Admission Date</div>
+                                    <div id="profileAdmission" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Days Since Admission</div>
+                                    <div id="profileDays" class="profile-value"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3 class="text-xl font-bold mb-4">Academic Details</h3>
+                            <div class="profile-grid">
+                                <div>
+                                    <div class="profile-label">Seat Number</div>
+                                    <div id="profileSeat" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Set Number</div>
+                                    <div id="profileSet" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Assigned Shifts</div>
+                                    <div id="profileShifts" class="profile-value"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3 class="text-xl font-bold mb-4">Fee Information</h3>
+                            <div class="profile-grid">
+                                <div>
+                                    <div class="profile-label">Monthly Fee</div>
+                                    <div id="profileMonthlyFee" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Fee Paid</div>
+                                    <div id="profileFeePaid" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Balance</div>
+                                    <div id="profileBalance" class="profile-value"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3 class="text-xl font-bold mb-4">Library Information</h3>
+                            <div class="profile-grid">
+                                <div>
+                                    <div class="profile-label">Set Number</div>
+                                    <div id="profileLibrarySet" class="profile-value"></div>
+                                </div>
+                                <div>
+                                    <div class="profile-label">Shift Availability</div>
+                                    <div class="shift-availability" id="profileSetAvailability"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center mt-8 no-print">
+                            <button id="whatsappBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center">
+                                <i class="fab fa-whatsapp mr-2 text-xl"></i> Send WhatsApp Reminder
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            // Firebase references
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            // Collections
+            const studentsRef = db.collection('students');
+            const configRef = db.collection('system').doc('config');
+            
+            // DOM Elements
+            const elements = {
+                loginScreen: document.getElementById('loginScreen'),
+                appContainer: document.getElementById('appContainer'),
+                studentModal: document.getElementById('studentModal'),
+                closeModal: document.getElementById('closeModal'),
+                addStudentBtn: document.getElementById('addStudentBtn'),
+                studentForm: document.getElementById('studentForm'),
+                studentTableBody: document.getElementById('studentTableBody'),
+                searchInput: document.getElementById('searchInput'),
+                shiftFilter: document.getElementById('shiftFilter'),
+                feeFilter: document.getElementById('feeFilter'),
+                resetFilters: document.getElementById('resetFilters'),
+                librarySetsSection: document.getElementById('librarySetsSection'),
+                manageSetsBtn: document.getElementById('manageSetsBtn'),
+                closeSetsBtn: document.getElementById('closeSetsBtn'),
+                totalSets: document.getElementById('totalSets'),
+                saveTotalSets: document.getElementById('saveTotalSets'),
+                shiftSetsContainer: document.getElementById('shiftSetsContainer'),
+                setNumber: document.getElementById('setNumber'),
+                darkModeToggle: document.getElementById('darkModeToggle'),
+                toast: document.getElementById('toast'),
+                addFirstStudent: document.getElementById('addFirstStudent'),
+                importBtn: document.getElementById('importBtn'),
+                exportBtn: document.getElementById('exportBtn'),
+                printBtn: document.getElementById('printBtn'),
+                logoutBtn: document.getElementById('logoutBtn'),
+                totalStudents: document.getElementById('totalStudents'),
+                paidStudents: document.getElementById('paidStudents'),
+                dueStudents: document.getElementById('dueStudents'),
+                shiftDistribution: document.getElementById('shiftDistribution'),
+                modalTitle: document.getElementById('modalTitle'),
+                studentId: document.getElementById('studentId'),
+                cancelBtn: document.getElementById('cancelBtn'),
+                fullName: document.getElementById('fullName'),
+                rollNumber: document.getElementById('rollNumber'),
+                mobileNumber: document.getElementById('mobileNumber'),
+                aadharNumber: document.getElementById('aadharNumber'),
+                admissionDate: document.getElementById('admissionDate'),
+                monthlyFee: document.getElementById('monthlyFee'),
+                feePaid: document.getElementById('feePaid'),
+                seatNumber: document.getElementById('seatNumber'),
+                shiftsContainer: document.getElementById('shiftsContainer'),
+                shiftAvailabilityInfo: document.getElementById('shiftAvailabilityInfo'),
+                profileModal: document.getElementById('profileModal'),
+                closeProfileBtn: document.getElementById('closeProfileBtn'),
+                printProfileBtn: document.getElementById('printProfileBtn'),
+                profileName: document.getElementById('profileName'),
+                profileRoll: document.getElementById('profileRoll'),
+                profileFeeStatus: document.getElementById('profileFeeStatus'),
+                profileMobile: document.getElementById('profileMobile'),
+                profileAadhar: document.getElementById('profileAadhar'),
+                profileAdmission: document.getElementById('profileAdmission'),
+                profileDays: document.getElementById('profileDays'),
+                profileSeat: document.getElementById('profileSeat'),
+                profileSet: document.getElementById('profileSet'),
+                profileShifts: document.getElementById('profileShifts'),
+                profileMonthlyFee: document.getElementById('profileMonthlyFee'),
+                profileFeePaid: document.getElementById('profileFeePaid'),
+                profileBalance: document.getElementById('profileBalance'),
+                profileLibrarySet: document.getElementById('profileLibrarySet'),
+                profileSetAvailability: document.getElementById('profileSetAvailability'),
+                printDate: document.getElementById('printDate'),
+                whatsappBtn: document.getElementById('whatsappBtn'),
+                importModal: document.getElementById('importModal'),
+                closeImportModal: document.getElementById('closeImportModal'),
+                fileDropArea: document.getElementById('fileDropArea'),
+                browseFilesBtn: document.getElementById('browseFilesBtn'),
+                fileInput: document.getElementById('fileInput'),
+                fileInfo: document.getElementById('fileInfo'),
+                fileName: document.getElementById('fileName'),
+                fileSize: document.getElementById('fileSize'),
+                fileType: document.getElementById('fileType'),
+                importStats: document.getElementById('importStats'),
+                importStudents: document.getElementById('importStudents'),
+                importSets: document.getElementById('importSets'),
+                importShifts: document.getElementById('importShifts'),
+                importResult: document.getElementById('importResult'),
+                cancelImportBtn: document.getElementById('cancelImportBtn'),
+                confirmImportBtn: document.getElementById('confirmImportBtn'),
+                resetBanner: document.getElementById('resetBanner'),
+                resetCount: document.getElementById('resetCount'),
+                dismissBanner: document.getElementById('dismissBanner'),
+                syncStatus: document.getElementById('syncStatus')
+            };
+
+            // Application state
+            let state = {
+                students: [],
+                totalSets: 10,
+                feeChart: null,
+                editingStudentId: null,
+                currentProfileStudent: null,
+                setAvailability: {},
+                currentImportFile: null,
+                unsubscribeStudents: null,
+                unsubscribeConfig: null
+            };
+
+            // Initialize application
+            function init() {
+                initAuth();
+                initDarkMode();
+                initFirebaseListeners();
+                initChart();
+                setupEventListeners();
+            }
+
+            // Initialize Firebase listeners
+            function initFirebaseListeners() {
+                // Listen for authentication state changes
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        // User is signed in
+                        elements.loginScreen.classList.add('hidden');
+                        elements.appContainer.classList.remove('hidden');
+                        
+                        // Set up config listener
+                        state.unsubscribeConfig = configRef.onSnapshot(doc => {
+                            if (doc.exists) {
+                                const data = doc.data();
+                                state.totalSets = data.totalSets || 10;
+                                state.setAvailability = data.setAvailability || {};
+                                
+                                // Update UI elements
+                                elements.totalSets.value = state.totalSets;
+                                generateSetOptions();
+                                renderLibrarySets();
+                            } else {
+                                // Initialize config if not exists
+                                configRef.set({
+                                    totalSets: 10,
+                                    setAvailability: {}
+                                });
+                            }
+                        });
+                        
+                        // Set up students listener
+                        state.unsubscribeStudents = studentsRef.onSnapshot(snapshot => {
+                            state.students = [];
+                            snapshot.forEach(doc => {
+                                state.students.push({ id: doc.id, ...doc.data() });
+                            });
+                            
+                            // Run fee reset check
+                            checkAndResetFees();
+                            
+                            // Update UI
+                            renderStudentTable();
+                            updateDashboard();
+                            updateChart();
+                        });
+                    } else {
+                        // User is signed out
+                        elements.loginScreen.classList.remove('hidden');
+                        elements.appContainer.classList.add('hidden');
+                        
+                        // Unsubscribe from listeners
+                        if (state.unsubscribeStudents) state.unsubscribeStudents();
+                        if (state.unsubscribeConfig) state.unsubscribeConfig();
+                    }
+                });
+                
+                // Monitor online/offline status
+                firebase.firestore().enableNetwork().then(() => {
+                    elements.syncStatus.textContent = " Online";
+                    elements.syncStatus.className = "sync-status sync-online";
+                    elements.syncStatus.innerHTML = '<i class="fas fa-wifi mr-1"></i> Online';
+                });
+                
+                firebase.firestore().disableNetwork().then(() => {
+                    elements.syncStatus.textContent = " Offline";
+                    elements.syncStatus.className = "sync-status sync-offline";
+                    elements.syncStatus.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
+                });
+            }
+
+            // Initialize authentication
+            function initAuth() {
+                // FirebaseUI config
+                const uiConfig = {
+                    signInOptions: [
+                        firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+                        firebase.auth.EmailAuthProvider.PROVIDER_ID
+                    ],
+                    signInSuccessUrl: '#',
+                    callbacks: {
+                        signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+                            return false; // Avoid redirect
+                        }
+                    }
+                };
+                
+                // Initialize FirebaseUI
+                const ui = new firebaseui.auth.AuthUI(firebase.auth());
+                ui.start('#firebaseui-auth-container', uiConfig);
+            }
+
+            // Check and reset fees every 30 days
+            function checkAndResetFees() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                let resetCount = 0;
+                let resetStudents = [];
+                
+                state.students.forEach(student => {
+                    const admission = new Date(student.admissionDate);
+                    const daysSinceAdmission = Math.floor((today - admission) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysSinceAdmission >= 30 && daysSinceAdmission % 30 === 0) {
+                        const lastReset = new Date(student.lastFeeReset || student.admissionDate);
+                        lastReset.setHours(0, 0, 0, 0);
+                        
+                        const daysSinceLastReset = Math.floor((today - lastReset) / (1000 * 60 * 60 * 24));
+                        
+                        if (daysSinceLastReset >= 30) {
+                            // Update student in Firestore
+                            studentsRef.doc(student.id).update({
+                                feePaid: 0,
+                                feeStatus: 'Due',
+                                lastFeeReset: today.toISOString().split('T')[0]
+                            });
+                            
+                            resetCount++;
+                            resetStudents.push(student.fullName);
+                        }
+                    }
+                });
+                
+                if (resetCount > 0) {
+                    // Show reset notification banner
+                    elements.resetCount.textContent = `${resetCount} students`;
+                    elements.resetBanner.classList.remove('hidden');
+                    
+                    // Log reset students for debugging
+                    console.log(`Fees reset for ${resetCount} students:`, resetStudents);
+                }
+            }
+
+            // Initialize set availability
+            function initSetAvailability() {
+                if (!state.setAvailability || Object.keys(state.setAvailability).length === 0) {
+                    state.setAvailability = {};
+                    for (let set = 1; set <= state.totalSets; set++) {
+                        state.setAvailability[set] = [1, 2, 3, 4];
+                    }
+                    saveSetAvailability();
+                }
+            }
+
+            // Save set availability to Firestore
+            function saveSetAvailability() {
+                configRef.update({
+                    setAvailability: state.setAvailability
+                }).catch(error => {
+                    showToast('Error saving set availability: ' + error.message);
+                });
+            }
+
+            // Setup event listeners
+            function setupEventListeners() {
+                // Modal handling
+                elements.addStudentBtn.addEventListener('click', openAddStudentModal);
+                elements.addFirstStudent.addEventListener('click', openAddStudentModal);
+                elements.closeModal.addEventListener('click', closeModal);
+                elements.cancelBtn.addEventListener('click', closeModal);
+                elements.dismissBanner.addEventListener('click', () => {
+                    elements.resetBanner.classList.add('hidden');
+                });
+                
+                // Form submission
+                elements.studentForm.addEventListener('submit', handleFormSubmit);
+                
+                // Set number change listener
+                elements.setNumber.addEventListener('change', updateShiftAvailability);
+                
+                // Filters
+                elements.searchInput.addEventListener('input', renderStudentTable);
+                elements.shiftFilter.addEventListener('change', renderStudentTable);
+                elements.feeFilter.addEventListener('change', renderStudentTable);
+                elements.resetFilters.addEventListener('click', resetFilters);
+                
+                // Library sets
+                elements.manageSetsBtn.addEventListener('click', () => {
+                    elements.librarySetsSection.classList.remove('hidden');
+                });
+                elements.closeSetsBtn.addEventListener('click', () => {
+                    elements.librarySetsSection.classList.add('hidden');
+                });
+                elements.saveTotalSets.addEventListener('click', saveTotalSets);
+                
+                // Dark mode toggle
+                elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+                
+                // Data export
+                elements.exportBtn.addEventListener('click', exportData);
+                elements.printBtn.addEventListener('click', printTable);
+                
+                // Profile modal
+                elements.closeProfileBtn.addEventListener('click', closeProfileModal);
+                elements.printProfileBtn.addEventListener('click', printProfile);
+                elements.whatsappBtn.addEventListener('click', sendWhatsAppFromProfile);
+                
+                // Import/Export functionality
+                elements.importBtn.addEventListener('click', openImportModal);
+                elements.closeImportModal.addEventListener('click', closeImportModal);
+                elements.cancelImportBtn.addEventListener('click', closeImportModal);
+                elements.browseFilesBtn.addEventListener('click', () => elements.fileInput.click());
+                elements.fileInput.addEventListener('change', handleFileSelect);
+                elements.confirmImportBtn.addEventListener('click', importData);
+                
+                // Logout button
+                elements.logoutBtn.addEventListener('click', () => {
+                    auth.signOut().then(() => {
+                        showToast('Successfully logged out');
+                    }).catch(error => {
+                        showToast('Logout error: ' + error.message);
+                    });
+                });
+                
+                // Drag and drop for file import
+                elements.fileDropArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    elements.fileDropArea.classList.add('drag-over');
+                });
+                
+                elements.fileDropArea.addEventListener('dragleave', () => {
+                    elements.fileDropArea.classList.remove('drag-over');
+                });
+                
+                elements.fileDropArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    elements.fileDropArea.classList.remove('drag-over');
+                    
+                    if (e.dataTransfer.files.length) {
+                        handleFile(e.dataTransfer.files[0]);
+                    }
+                });
+            }
+
+            // Update shift availability based on selected set
+            function updateShiftAvailability() {
+                const selectedSet = elements.setNumber.value;
+                const studentId = elements.studentId.value;
+                
+                let currentStudent = null;
+                if (studentId) {
+                    currentStudent = state.students.find(s => s.id === studentId);
+                }
+                
+                if (!selectedSet) {
+                    document.querySelectorAll('input[name="shifts"]').forEach(checkbox => {
+                        checkbox.disabled = false;
+                        checkbox.parentElement.classList.remove('text-gray-400');
+                    });
+                    elements.shiftAvailabilityInfo.textContent = '';
+                    return;
+                }
+                
+                const setNum = parseInt(selectedSet);
+                const availableShifts = state.setAvailability[setNum] || [];
+                
+                document.querySelectorAll('input[name="shifts"]').forEach(checkbox => {
+                    const shiftNum = parseInt(checkbox.value);
+                    let isAvailable = availableShifts.includes(shiftNum);
+                    
+                    if (currentStudent && currentStudent.setNumber === selectedSet) {
+                        if (currentStudent.shifts.includes(checkbox.value)) {
+                            isAvailable = true;
+                        }
+                    }
+                    
+                    checkbox.disabled = !isAvailable;
+                    
+                    if (!isAvailable && !checkbox.checked) {
+                        checkbox.parentElement.classList.add('text-gray-400');
+                    } else {
+                        checkbox.parentElement.classList.remove('text-gray-400');
+                    }
+                });
+                
+                if (availableShifts.length === 0) {
+                    if (currentStudent && currentStudent.setNumber === selectedSet) {
+                        elements.shiftAvailabilityInfo.textContent = 'No additional shifts available. Student\'s current shifts are preserved.';
+                    } else {
+                        elements.shiftAvailabilityInfo.innerHTML = '<span class="text-red-600">No shifts available for this set!</span>';
+                    }
+                } else {
+                    elements.shiftAvailabilityInfo.textContent = `Available shifts: ${availableShifts.map(s => `Shift ${s}`).join(', ')}`;
+                }
+            }
+
+            // Open modal for adding a student
+            function openAddStudentModal() {
+                elements.modalTitle.textContent = 'Add New Student';
+                elements.studentId.value = '';
+                elements.studentForm.reset();
+                elements.studentModal.style.display = 'flex';
+                generateSetOptions();
+                updateShiftAvailability();
+            }
+
+            // Open modal for editing a student
+            function openEditStudentModal(id) {
+                const student = state.students.find(s => s.id === id);
+                if (!student) return;
+                
+                elements.modalTitle.textContent = 'Edit Student';
+                elements.studentId.value = student.id;
+                elements.fullName.value = student.fullName;
+                elements.rollNumber.value = student.rollNumber;
+                elements.mobileNumber.value = student.mobileNumber;
+                elements.aadharNumber.value = student.aadharNumber || '';
+                elements.admissionDate.value = student.admissionDate;
+                elements.monthlyFee.value = student.monthlyFee;
+                elements.feePaid.value = student.feePaid;
+                elements.seatNumber.value = student.seatNumber || '';
+                
+                document.querySelectorAll('input[name="shifts"]').forEach(checkbox => {
+                    checkbox.checked = student.shifts.includes(checkbox.value);
+                });
+                
+                elements.setNumber.value = student.setNumber || '';
+                
+                elements.studentModal.style.display = 'flex';
+                
+                setTimeout(() => {
+                    updateShiftAvailability();
+                }, 100);
+            }
+
+            // Open student profile modal
+            function openStudentProfile(id) {
+                const student = state.students.find(s => s.id === id);
+                if (!student) return;
+                
+                state.currentProfileStudent = student;
+                
+                elements.profileName.textContent = student.fullName;
+                elements.profileRoll.textContent = `Roll No: ${student.rollNumber}`;
+                elements.profileMobile.textContent = student.mobileNumber;
+                elements.profileAadhar.textContent = student.aadharNumber || 'N/A';
+                elements.profileAdmission.textContent = formatDate(student.admissionDate);
+                elements.profileSeat.textContent = student.seatNumber || 'N/A';
+                elements.profileSet.textContent = student.setNumber || 'N/A';
+                elements.profileShifts.textContent = student.shifts.map(s => `Shift ${s}`).join(', ');
+                elements.profileMonthlyFee.textContent = `₹${student.monthlyFee}`;
+                elements.profileFeePaid.textContent = `₹${student.feePaid}`;
+                elements.profileLibrarySet.textContent = student.setNumber || 'N/A';
+                
+                if (student.setNumber) {
+                    const setNum = parseInt(student.setNumber);
+                    const availableShifts = state.setAvailability[setNum] || [];
+                    
+                    elements.profileSetAvailability.innerHTML = '';
+                    [1, 2, 3, 4].forEach(shift => {
+                        const isAvailable = availableShifts.includes(shift);
+                        const badge = document.createElement('div');
+                        badge.className = `shift-badge ${isAvailable ? 'available-shift' : 'unavailable-shift'}`;
+                        badge.textContent = `Shift ${shift}`;
+                        elements.profileSetAvailability.appendChild(badge);
+                    });
+                } else {
+                    elements.profileSetAvailability.textContent = 'N/A';
+                }
+                
+                const balance = student.monthlyFee - student.feePaid;
+                elements.profileBalance.textContent = `₹${balance}`;
+                if (balance > 0) {
+                    elements.profileBalance.classList.add('text-red-600');
+                } else {
+                    elements.profileBalance.classList.remove('text-red-600');
+                }
+                
+                const admissionDate = new Date(student.admissionDate);
+                const today = new Date();
+                const daysSinceAdmission = Math.floor((today - admissionDate) / (1000 * 60 * 60 * 24));
+                elements.profileDays.textContent = `${daysSinceAdmission} days`;
+                
+                if (student.lastFeeReset) {
+                    const lastResetDate = new Date(student.lastFeeReset);
+                    const daysSinceReset = Math.floor((today - lastResetDate) / (1000 * 60 * 60 * 24));
+                    elements.profileDays.textContent += ` (Last reset: ${formatDate(student.lastFeeReset)}, ${daysSinceReset} days ago)`;
+                }
+                
+                elements.profileFeeStatus.textContent = student.feeStatus;
+                elements.profileFeeStatus.className = 'mt-2 px-4 py-1 inline-block rounded-full font-medium';
+                elements.profileFeeStatus.classList.add(`badge-${student.feeStatus.toLowerCase()}`);
+                
+                elements.printDate.textContent = new Date().toLocaleDateString();
+                
+                elements.profileModal.style.display = 'flex';
+            }
+
+            // Close modal
+            function closeModal() {
+                elements.studentModal.style.display = 'none';
+            }
+
+            // Close profile modal
+            function closeProfileModal() {
+                elements.profileModal.style.display = 'none';
+            }
+
+            // Handle form submission
+            function handleFormSubmit(e) {
+                e.preventDefault();
+                
+                const shiftCheckboxes = document.querySelectorAll('input[name="shifts"]:checked');
+                const selectedShifts = Array.from(shiftCheckboxes).map(cb => cb.value);
+                
+                if (selectedShifts.length === 0) {
+                    showToast('Please select at least one shift');
+                    return;
+                }
+                
+                const studentData = {
+                    fullName: elements.fullName.value,
+                    rollNumber: elements.rollNumber.value,
+                    mobileNumber: elements.mobileNumber.value,
+                    aadharNumber: elements.aadharNumber.value,
+                    admissionDate: elements.admissionDate.value,
+                    monthlyFee: parseFloat(elements.monthlyFee.value),
+                    feePaid: parseFloat(elements.feePaid.value),
+                    seatNumber: elements.seatNumber.value,
+                    shifts: selectedShifts,
+                    setNumber: elements.setNumber.value || null
+                };
+                
+                if (!elements.studentId.value) {
+                    studentData.lastFeeReset = studentData.admissionDate;
+                }
+                
+                studentData.feeStatus = calculateFeeStatus(studentData);
+                
+                const oldSetNumber = state.students.find(s => s.id === elements.studentId.value)?.setNumber;
+                const newSetNumber = studentData.setNumber;
+                
+                if (oldSetNumber !== newSetNumber) {
+                    if (oldSetNumber) {
+                        restoreSetAvailability(oldSetNumber, studentData.shifts);
+                    }
+                    
+                    if (newSetNumber) {
+                        assignSetAvailability(newSetNumber, studentData.shifts);
+                    }
+                } else if (newSetNumber) {
+                    const oldShifts = state.students.find(s => s.id === elements.studentId.value)?.shifts || [];
+                    const shiftsToRemove = oldShifts.filter(shift => !selectedShifts.includes(shift));
+                    const shiftsToAdd = selectedShifts.filter(shift => !oldShifts.includes(shift));
+                    
+                    if (shiftsToRemove.length > 0) {
+                        restoreSetAvailability(newSetNumber, shiftsToRemove);
+                    }
+                    
+                    if (shiftsToAdd.length > 0) {
+                        assignSetAvailability(newSetNumber, shiftsToAdd);
+                    }
+                }
+                
+                if (elements.studentId.value) {
+                    studentsRef.doc(elements.studentId.value).update(studentData)
+                        .then(() => {
+                            showToast('Student updated successfully!');
+                            closeModal();
+                        })
+                        .catch(error => {
+                            showToast('Error updating student: ' + error.message);
+                        });
+                } else {
+                    studentData.id = Date.now().toString();
+                    studentsRef.add(studentData)
+                        .then(() => {
+                            showToast('Student added successfully!');
+                            closeModal();
+                        })
+                        .catch(error => {
+                            showToast('Error adding student: ' + error.message);
+                        });
+                }
+            }
+
+            // Assign shifts to a set
+            function assignSetAvailability(setNumber, shifts) {
+                const setNum = parseInt(setNumber);
+                if (!state.setAvailability[setNum]) return;
+                
+                shifts.forEach(shift => {
+                    const shiftNum = parseInt(shift);
+                    const index = state.setAvailability[setNum].indexOf(shiftNum);
+                    if (index !== -1) {
+                        state.setAvailability[setNum].splice(index, 1);
+                    }
+                });
+                
+                saveSetAvailability();
+            }
+
+            // Restore shifts to a set
+            function restoreSetAvailability(setNumber, shifts) {
+                const setNum = parseInt(setNumber);
+                if (!state.setAvailability[setNum]) return;
+                
+                shifts.forEach(shift => {
+                    const shiftNum = parseInt(shift);
+                    if (!state.setAvailability[setNum].includes(shiftNum)) {
+                        state.setAvailability[setNum].push(shiftNum);
+                        state.setAvailability[setNum].sort();
+                    }
+                });
+                
+                saveSetAvailability();
+            }
+
+            // Calculate fee status
+            function calculateFeeStatus(student) {
+                const admissionDate = new Date(student.admissionDate);
+                const today = new Date();
+                const daysSinceAdmission = Math.floor((today - admissionDate) / (1000 * 60 * 60 * 24));
+                
+                if (daysSinceAdmission > 30) {
+                    if (student.feePaid >= student.monthlyFee) {
+                        return 'Paid';
+                    } else if (student.feePaid > 0) {
+                        return 'Partial';
+                    } else {
+                        return 'Due';
+                    }
+                }
+                
+                return student.feePaid >= student.monthlyFee ? 'Paid' : 'Partial';
+            }
+
+            // Render student table
+            function renderStudentTable() {
+                let filteredStudents = [...state.students];
+                
+                const searchTerm = elements.searchInput.value.toLowerCase();
+                if (searchTerm) {
+                    filteredStudents = filteredStudents.filter(student => 
+                        student.fullName.toLowerCase().includes(searchTerm) || 
+                        student.rollNumber.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                const shiftFilter = elements.shiftFilter.value;
+                if (shiftFilter) {
+                    filteredStudents = filteredStudents.filter(student => 
+                        student.shifts.includes(shiftFilter)
+                    );
+                }
+                
+                const feeFilter = elements.feeFilter.value;
+                if (feeFilter) {
+                    filteredStudents = filteredStudents.filter(student => 
+                        student.feeStatus === feeFilter
+                    );
+                }
+                
+                filteredStudents.sort((a, b) => 
+                    new Date(b.admissionDate) - new Date(a.admissionDate)
+                );
+                
+                if (filteredStudents.length === 0) {
+                    elements.studentTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="py-8 text-center text-gray-500">
+                                <i class="fas fa-users-slash text-3xl mb-2"></i>
+                                <p>No student records found</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                elements.studentTableBody.innerHTML = filteredStudents.map(student => `
+                    <tr class="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="py-3 px-4">${student.fullName}</td>
+                        <td class="py-3 px-4">${student.rollNumber}</td>
+                        <td class="py-3 px-4">${student.mobileNumber}</td>
+                        <td class="py-3 px-4">${formatDate(student.admissionDate)}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-1">
+                                ${student.shifts.map(shift => `
+                                    <span class="px-2 py-1 text-xs rounded ${getShiftClass(shift)}">
+                                        Shift ${shift}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">${student.setNumber || 'N/A'}</td>
+                        <td class="py-3 px-4">
+                            <span class="badge-${student.feeStatus.toLowerCase()} px-3 py-1 rounded-full text-xs font-medium">
+                                ${student.feeStatus}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 action-buttons">
+                            <div class="flex space-x-2">
+                                <button class="text-blue-500 hover:text-blue-700 view-profile" data-id="${student.id}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="text-green-600 hover:text-green-800 send-reminder" data-mobile="${student.mobileNumber}" data-name="${student.fullName}">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                <button class="text-blue-600 hover:text-blue-800 edit-student" data-id="${student.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800 delete-student" data-id="${student.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                document.querySelectorAll('.edit-student').forEach(button => {
+                    button.addEventListener('click', () => {
+                        openEditStudentModal(button.dataset.id);
+                    });
+                });
+                
+                document.querySelectorAll('.delete-student').forEach(button => {
+                    button.addEventListener('click', () => {
+                        if (confirm('Are you sure you want to delete this student?')) {
+                            deleteStudent(button.dataset.id);
+                        }
+                    });
+                });
+                
+                document.querySelectorAll('.send-reminder').forEach(button => {
+                    button.addEventListener('click', () => {
+                        sendWhatsAppReminder(button.dataset.mobile, button.dataset.name);
+                    });
+                });
+                
+                document.querySelectorAll('.view-profile').forEach(button => {
+                    button.addEventListener('click', () => {
+                        openStudentProfile(button.dataset.id);
+                    });
+                });
+            }
+
+            // Delete a student
+            function deleteStudent(id) {
+                const student = state.students.find(s => s.id === id);
+                if (!student) return;
+                
+                if (student.setNumber) {
+                    restoreSetAvailability(student.setNumber, student.shifts);
+                }
+                
+                studentsRef.doc(id).delete()
+                    .then(() => {
+                        showToast('Student deleted successfully!');
+                    })
+                    .catch(error => {
+                        showToast('Error deleting student: ' + error.message);
+                    });
+            }
+
+            // Send WhatsApp reminder
+            function sendWhatsAppReminder(mobile, name) {
+                const message = `Hello ${name}, this is a reminder that your monthly fee is pending. Please pay it at your earliest convenience.`;
+                const encodedMessage = encodeURIComponent(message);
+                const whatsappUrl = `https://wa.me/91${mobile}?text=${encodedMessage}`;
+                
+                window.open(whatsappUrl, '_blank');
+            }
+
+            // Send WhatsApp from profile
+            function sendWhatsAppFromProfile() {
+                if (!state.currentProfileStudent) return;
+                sendWhatsAppReminder(state.currentProfileStudent.mobileNumber, state.currentProfileStudent.fullName);
+            }
+
+            // Print profile
+            function printProfile() {
+                window.print();
+            }
+
+            // Reset filters
+            function resetFilters() {
+                elements.searchInput.value = '';
+                elements.shiftFilter.value = '';
+                elements.feeFilter.value = '';
+                renderStudentTable();
+            }
+
+            // Save total sets
+            function saveTotalSets() {
+                const totalSets = parseInt(elements.totalSets.value);
+                if (isNaN(totalSets) || totalSets < 1) {
+                    alert('Please enter a valid number of sets');
+                    return;
+                }
+                
+                state.totalSets = totalSets;
+                
+                for (let set = 1; set <= state.totalSets; set++) {
+                    if (!state.setAvailability[set]) {
+                        state.setAvailability[set] = [1, 2, 3, 4];
+                    }
+                }
+                
+                Object.keys(state.setAvailability).forEach(setNum => {
+                    if (parseInt(setNum) > state.totalSets) {
+                        delete state.setAvailability[setNum];
+                    }
+                });
+                
+                configRef.update({
+                    totalSets: state.totalSets,
+                    setAvailability: state.setAvailability
+                }).then(() => {
+                    showToast('Total sets updated!');
+                }).catch(error => {
+                    showToast('Error updating sets: ' + error.message);
+                });
+            }
+
+            // Generate set options for dropdown
+            function generateSetOptions() {
+                elements.setNumber.innerHTML = '<option value="">Select a set</option>';
+                
+                for (let i = 1; i <= state.totalSets; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `Set ${i}`;
+                    elements.setNumber.appendChild(option);
+                }
+            }
+
+            // Render library sets
+            function renderLibrarySets() {
+                elements.shiftSetsContainer.innerHTML = '';
+                
+                for (let shift = 1; shift <= 4; shift++) {
+                    const availableSets = [];
+                    const assignedSets = [];
+                    
+                    for (let set = 1; set <= state.totalSets; set++) {
+                        if (state.setAvailability[set] && state.setAvailability[set].includes(shift)) {
+                            availableSets.push(set);
+                        } else {
+                            assignedSets.push(set);
+                        }
+                    }
+                    
+                    elements.shiftSetsContainer.innerHTML += `
+                        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <h3 class="font-semibold mb-2">Shift ${shift} (${getShiftTime(shift)})</h3>
+                            <p class="text-sm mb-1"><span class="font-medium">Students:</span> ${countStudentsInShift(shift)}</p>
+                            <p class="text-sm mb-1"><span class="font-medium">Available Sets:</span> ${availableSets.length > 0 ? availableSets.join(', ') : 'None'}</p>
+                            <p class="text-sm"><span class="font-medium">Assigned Sets:</span> ${assignedSets.length > 0 ? assignedSets.join(', ') : 'None'}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Count students in a shift
+            function countStudentsInShift(shift) {
+                return state.students.filter(student => 
+                    student.shifts.includes(shift.toString())
+                ).length;
+            }
+
+            // Get shift time
+            function getShiftTime(shift) {
+                const times = {
+                    '1': '6AM-10AM',
+                    '2': '10AM-2PM',
+                    '3': '2PM-6PM',
+                    '4': '6PM-10PM'
+                };
+                return times[shift] || '';
+            }
+
+            // Get shift class for styling
+            function getShiftClass(shift) {
+                return `shift-${shift}`;
+            }
+
+            // Toggle dark mode
+            function toggleDarkMode() {
+                document.body.classList.toggle('dark-mode');
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDarkMode);
+                updateChart();
+            }
+
+            // Initialize dark mode from localStorage
+            function initDarkMode() {
+                const darkMode = localStorage.getItem('darkMode') === 'true';
+                if (darkMode) {
+                    document.body.classList.add('dark-mode');
+                }
+            }
+
+            // Show toast notification
+            function showToast(message) {
+                elements.toast.textContent = message;
+                elements.toast.classList.add('show');
+                
+                setTimeout(() => {
+                    elements.toast.classList.remove('show');
+                }, 3000);
+            }
+
+            // Format date
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString();
+            }
+
+            // Update dashboard
+            function updateDashboard() {
+                elements.totalStudents.textContent = state.students.length;
+                
+                const paidCount = state.students.filter(s => s.feeStatus === 'Paid').length;
+                const dueCount = state.students.filter(s => s.feeStatus === 'Due').length;
+                const partialCount = state.students.filter(s => s.feeStatus === 'Partial').length;
+                
+                elements.paidStudents.textContent = paidCount;
+                elements.dueStudents.textContent = dueCount;
+                
+                const shiftCounts = {1: 0, 2: 0, 3: 0, 4: 0};
+                state.students.forEach(student => {
+                    student.shifts.forEach(shift => {
+                        shiftCounts[shift]++;
+                    });
+                });
+                
+                elements.shiftDistribution.innerHTML = `
+                    Shift 1: ${shiftCounts[1]}, 
+                    Shift 2: ${shiftCounts[2]}, 
+                    Shift 3: ${shiftCounts[3]}, 
+                    Shift 4: ${shiftCounts[4]}
+                `;
+            }
+
+            // Initialize chart
+            function initChart() {
+                const ctx = document.getElementById('feeChart').getContext('2d');
+                
+                state.feeChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Paid', 'Partial', 'Due'],
+                        datasets: [{
+                            data: [0, 0, 0],
+                            backgroundColor: [
+                                '#166534',
+                                '#854d0e',
+                                '#b91c1c'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: document.body.classList.contains('dark-mode') ? '#f8fafc' : '#1e293b',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.raw} students`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Update chart data
+            function updateChart() {
+                if (!state.feeChart) return;
+                
+                const paidCount = state.students.filter(s => s.feeStatus === 'Paid').length;
+                const partialCount = state.students.filter(s => s.feeStatus === 'Partial').length;
+                const dueCount = state.students.filter(s => s.feeStatus === 'Due').length;
+                
+                state.feeChart.data.datasets[0].data = [paidCount, partialCount, dueCount];
+                state.feeChart.update();
+            }
+
+            // Export data to JSON
+            function exportData() {
+                if (state.students.length === 0) {
+                    showToast('No data to export');
+                    return;
+                }
+                
+                const exportData = {
+                    students: state.students,
+                    totalSets: state.totalSets,
+                    setAvailability: state.setAvailability,
+                    exportedAt: new Date().toISOString(),
+                    system: "Student Management System"
+                };
+                
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `student_data_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast('Data exported to JSON file');
+            }
+
+            // Print student table
+            function printTable() {
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Student Records</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; }
+                            table { width: 100%; border-collapse: collapse; }
+                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                            th { background-color: #f2f2f2; }
+                            .badge-paid { background-color: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; }
+                            .badge-partial { background-color: #fffbeb; color: #854d0e; padding: 2px 8px; border-radius: 12px; }
+                            .badge-due { background-color: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Student Records</h1>
+                        <p>Generated on ${new Date().toLocaleString()}</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Roll No</th>
+                                    <th>Mobile</th>
+                                    <th>Admission Date</th>
+                                    <th>Shifts</th>
+                                    <th>Set No</th>
+                                    <th>Fee Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${state.students.map(student => `
+                                    <tr>
+                                        <td>${student.fullName}</td>
+                                        <td>${student.rollNumber}</td>
+                                        <td>${student.mobileNumber}</td>
+                                        <td>${formatDate(student.admissionDate)}</td>
+                                        <td>${student.shifts.join(', ')}</td>
+                                        <td>${student.setNumber || 'N/A'}</td>
+                                        <td><span class="badge-${student.feeStatus.toLowerCase()}">${student.feeStatus}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
+                printWindow.print();
+            }
+
+            // Open import modal
+            function openImportModal() {
+                elements.importModal.style.display = 'flex';
+                resetImportUI();
+            }
+
+            // Close import modal
+            function closeImportModal() {
+                elements.importModal.style.display = 'none';
+                resetImportUI();
+            }
+
+            // Reset import UI elements
+            function resetImportUI() {
+                elements.fileInfo.classList.add('hidden');
+                elements.importStats.classList.add('hidden');
+                elements.importResult.classList.add('hidden');
+                elements.fileInput.value = '';
+                state.currentImportFile = null;
+            }
+
+            // Handle file selection
+            function handleFileSelect(e) {
+                if (e.target.files.length) {
+                    handleFile(e.target.files[0]);
+                }
+            }
+
+            // Handle file for import
+            function handleFile(file) {
+                if (file.type !== 'application/json') {
+                    showImportError('Please select a valid JSON file');
+                    return;
+                }
+                
+                state.currentImportFile = file;
+                
+                elements.fileName.textContent = file.name;
+                elements.fileSize.textContent = formatFileSize(file.size);
+                elements.fileType.textContent = file.type;
+                elements.fileInfo.classList.remove('hidden');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        elements.importStudents.textContent = data.students ? data.students.length : 0;
+                        elements.importSets.textContent = data.totalSets || 'N/A';
+                        elements.importShifts.textContent = data.setAvailability ? 
+                            `${Object.keys(data.setAvailability).length} sets` : 'N/A';
+                        
+                        elements.importStats.classList.remove('hidden');
+                        elements.importResult.classList.remove('hidden');
+                        elements.importResult.innerHTML = '<p class="text-blue-500">Data ready for import. Click "Import Data" to proceed.</p>';
+                    } catch (error) {
+                        showImportError('Invalid file format. Please select a valid export file.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            // Format file size
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // Show import error
+            function showImportError(message) {
+                elements.importResult.classList.remove('hidden');
+                elements.importResult.innerHTML = `<p class="import-error"><i class="fas fa-exclamation-circle mr-2"></i>${message}</p>`;
+            }
+
+            // Import data from file
+            function importData() {
+                if (!state.currentImportFile) {
+                    showImportError('Please select a file first');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        if (!data.students || !data.totalSets || !data.setAvailability) {
+                            showImportError('Invalid data format. Missing required fields.');
+                            return;
+                        }
+                        
+                        // Update config first
+                        configRef.set({
+                            totalSets: data.totalSets,
+                            setAvailability: data.setAvailability
+                        }).then(() => {
+                            // Import students in batches
+                            const batch = db.batch();
+                            const studentsCollection = db.collection('students');
+                            
+                            // Delete existing students
+                            studentsRef.get().then(snapshot => {
+                                snapshot.docs.forEach(doc => {
+                                    batch.delete(doc.ref);
+                                });
+                                
+                                return batch.commit();
+                            }).then(() => {
+                                const addBatch = db.batch();
+                                
+                                data.students.forEach(student => {
+                                    const newDocRef = studentsRef.doc();
+                                    addBatch.set(newDocRef, student);
+                                });
+                                
+                                return addBatch.commit();
+                            }).then(() => {
+                                elements.importResult.innerHTML = `
+                                    <p class="import-success">
+                                        <i class="fas fa-check-circle mr-2"></i>
+                                        Data imported successfully! ${data.students.length} students loaded.
+                                    </p>
+                                `;
+                                
+                                showToast(`Data imported successfully! ${data.students.length} students loaded.`);
+                                
+                                setTimeout(closeImportModal, 2000);
+                            }).catch(error => {
+                                showImportError('Error importing data: ' + error.message);
+                            });
+                        });
+                    } catch (error) {
+                        showImportError('Error parsing file: ' + error.message);
+                    }
+                };
+                reader.readAsText(state.currentImportFile);
+            }
+
+            // Initialize the application
+            init();
+        });
     </script>
 </body>
 </html>
